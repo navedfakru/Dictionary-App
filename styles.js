@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 18,
     marginBottom: 10,
-    fontFamily: "PlaypenSans-medium"
+    fontFamily: "PlaypenSans"
   },
   clearButton: {
     backgroundColor: "#FF4A4A",

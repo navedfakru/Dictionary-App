@@ -7,12 +7,13 @@ import { Audio } from 'expo-av';
 
 export default function App() {
   const [newWord, setNewWord] = useState("");
-  const [checkedWord, setCheckedWord] = useState("success");
-  const [definition, setDefinition] = useState("The achievement of one's aim or goal.");
-  const [example, setExample] = useState("His third attempt to pass the entrance exam was a success.");
+  const [checkedWord, setCheckedWord] = useState("");
+  const [definition, setDefinition] = useState("");
+  const [example, setExample] = useState("");
   const [sound, setSound] = useState();
   const [data, setData] = useState();
   const [error, setErrors] = useState(null);
+
 
   const [loaded, errors] = useFonts({
     'PlaypenSans': require('./assets/fonts/PlaypenSans-Regular.ttf'),
@@ -22,23 +23,61 @@ export default function App() {
   });
 
   const searchWord = (enterWord) => {
-    setNewWord(enterWord)
+    let text = enterWord.toLowerCase().trim()
+    setNewWord(text)
   }
 
   const getInfo = async () => {
     let url = "https://api.dictionaryapi.dev/api/v2/entries/en/" + newWord;
-    const response = await fetch(url)
-    const fetchData = await response.json()
-    console.log(response)
+    try {
+      const response = await fetch(url)
+      const fetchData = await response.json()
+      // console.log(fetchData)
+      if (response.status === 200) {
+        // successfull response
+        setData(fetchData);
+
+        let word = fetchData[0]?.word || "no word found";
+        setCheckedWord(word);
+        
+        let def = fetchData[0]?.meanings[0]?.definitions[0]?.definition || "no definitions found";
+        setDefinition(def);
+
+        let eg = fetchData[0]?.meanings[0]?.definitions[0]?.example || "no example found"
+        setExample(eg);
+
+        // clear any previous error
+        setErrors(null);
+      } else {
+        // api response indicates an error
+        setErrors("word not found in the database");
+
+        // Automatically clear the erro after 3 seconds
+        setTimeout(() => {setErrors(null), 3000})
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setErrors("An error occurred while fetching data");
+      setTimeout(() => {setErrors(null);}, 3000);
+    }
   }
   
   const playAudio = async () => {
-    const audioUri = "https://api.dictionaryapi.dev/media/pronunciations/en/success-us.mp3"
+    if (data && data[0].phonetics && data[0].phonetics[0] && data[0].phonetics[0].audio) {
+      if (sound) {
+        await sound.unloadAsync()
+      }
 
-    const {sound, status} = await Audio.Sound.createAsync({uri: audioUri})
-    if (status.isLoaded) {
-      setSound(sound)
-      await sound.playAsync()
+      const audioUri = data[0].phonetics[0].audio
+      // const audioUriText = data[0].definition[0].definition
+      // console.log("from play audio", audioUri)
+
+      const {sound, status} = await Audio.Sound.createAsync({uri: audioUri})
+
+      if (status.isLoaded) {
+        setSound(sound);
+        await sound.playAsync()
+      }
     }
   }
 
@@ -68,7 +107,6 @@ export default function App() {
           <Text style={styles.buttonText}>Search</Text>
         </TouchableOpacity>
       </View>
-      <Text>{newWord}</Text>
       {error && (
         <Text style={styles.errorText}>{error}</Text>
       )}
@@ -83,10 +121,21 @@ export default function App() {
           </TouchableOpacity>
           <View style={styles.resultTextContainer}>
             <Text style={styles.resultText}>
-              Definintion: {definition}
+              <Text style={{
+                color: 'red',
+                fontFamily: "PlaypenSans-bold",
+                fontSize: 20,
+                textDecorationLine: "underline"
+              }}>Definintion:</Text> {definition}
             </Text>
             <Text style={styles.resultText}>
-              Example: {example}
+              <Text style={{
+                color: "blue",
+                fontFamily: "PlaypenSans-bold",
+                fontSize: 20,
+                textDecorationLine: "underline"
+              }}
+              >Example:</Text> {example}
             </Text>
           </View>
         </ScrollView>)}
